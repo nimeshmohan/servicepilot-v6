@@ -7,11 +7,12 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import Modal from '@/components/shared/Modal';
 import VehicleTimeline from '@/components/shared/VehicleTimeline';
 import toast from 'react-hot-toast';
-import { Search, Eye, RefreshCw, Pencil } from 'lucide-react';
+import { Search, Eye, RefreshCw, Pencil, CheckCircle } from 'lucide-react';
 
 const ADVISER_STATUSES = ['WDA', 'WIA', 'WCA', 'WFA'];
-const FILTER_STATUSES  = ['WDA', 'WIA', 'WCA', 'WFA', 'RFD'];
-const NEXT_STATUS = { WDA: 'WIA', WIA: 'WCA', WCA: 'WFA', WFA: 'WFA' };
+const ALL_ADVISER_STATUSES = ['WDA', 'WIA', 'WCA', 'WFA', 'Delivered'];
+const FILTER_STATUSES  = ['WDA', 'WIA', 'WCA', 'WFA', 'RFD', 'Delivered'];
+const NEXT_STATUS = { WDA: 'WIA', WIA: 'WCA', WCA: 'WFA', WFA: 'WFA', RFD: 'Delivered' };
 
 export default function ReceivedVehicles() {
   const { user, userProfile } = useAuth();
@@ -224,12 +225,20 @@ export default function ReceivedVehicles() {
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
-                          {v.currentStatus !== 'RFD' && (
+                          {!['RFD', 'Delivered'].includes(v.currentStatus) && (
                             <button
                               className="btn-primary btn-sm"
                               onClick={() => openUpdateModal(v)}
                             >
                               <RefreshCw className="w-3 h-3" /> Update
+                            </button>
+                          )}
+                          {v.currentStatus === 'RFD' && (
+                            <button
+                              className="btn-sm bg-green-600 hover:bg-green-700 text-white rounded-lg px-2 py-1 text-xs font-semibold flex items-center gap-1"
+                              onClick={() => openUpdateModal(v)}
+                            >
+                              <CheckCircle className="w-3 h-3" /> Delivered
                             </button>
                           )}
                         </div>
@@ -258,7 +267,7 @@ export default function ReceivedVehicles() {
             <div>
               <label className="label">New Status</label>
               <select className="select" value={updateForm.status} onChange={e => setUpdateForm(f => ({ ...f, status: e.target.value }))}>
-                {ADVISER_STATUSES.map(s => (
+                {(selectedVehicle?.currentStatus === 'RFD' ? ['Delivered'] : ADVISER_STATUSES).map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
