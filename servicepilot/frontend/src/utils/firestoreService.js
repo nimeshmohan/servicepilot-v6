@@ -228,21 +228,47 @@ export const updatePartsTracking = async (vehicleId, data, updatedBy, prevData =
     logs: arrayUnion(logEntry),
   });
 
-  // ALSO write to vehicleStatusHistory so it appears in the Status Timeline
-  await addDoc(collection(db, 'vehicleStatusHistory'), {
-    vehicleId,
-    status: 'PNA',                    // vehicle is still PNA
-    previousStatus: 'PNA',
-    entryType: 'parts_update',        // flag to render differently in timeline
-    orderStatus: data.orderStatus,    // e.g. "Ordered", "Partially Received"
-    summary,                          // full change description
-    remarks: data.remarks || '',
-    receivedPartsCount: data.receivedPartsCount ?? prevData.receivedPartsCount ?? 0,
-    totalPartsCount: data.totalPartsCount ?? prevData.totalPartsCount ?? 0,
-    updatedBy,
-    updatedByRole: 'parts_allocator',
-    timestamp: serverTimestamp(),
-  });
+  // Auto-transition vehicle status PNA → PRWA when parts fully received
+  if (data.orderStatus === 'Fully Received') {
+    const vehicleRef = doc(db, 'vehicles', vehicleId);
+    await updateDoc(vehicleRef, {
+      currentStatus: 'PRWA',
+      previousStatus: 'PNA',
+      statusEnteredAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    // Log the status transition in vehicleStatusHistory
+    await addDoc(collection(db, 'vehicleStatusHistory'), {
+      vehicleId,
+      status: 'PRWA',
+      previousStatus: 'PNA',
+      entryType: 'parts_update',
+      orderStatus: 'Fully Received',
+      summary: 'All parts received — vehicle moved to Parts Received, Waiting for Allocation',
+      remarks: data.remarks || '',
+      receivedPartsCount: data.receivedPartsCount ?? prevData.receivedPartsCount ?? 0,
+      totalPartsCount: data.totalPartsCount ?? prevData.totalPartsCount ?? 0,
+      updatedBy,
+      updatedByRole: 'parts_allocator',
+      timestamp: serverTimestamp(),
+    });
+  } else {
+    // For all other order status updates — log as parts_update on PNA
+    await addDoc(collection(db, 'vehicleStatusHistory'), {
+      vehicleId,
+      status: 'PNA',
+      previousStatus: 'PNA',
+      entryType: 'parts_update',
+      orderStatus: data.orderStatus,
+      summary,
+      remarks: data.remarks || '',
+      receivedPartsCount: data.receivedPartsCount ?? prevData.receivedPartsCount ?? 0,
+      totalPartsCount: data.totalPartsCount ?? prevData.totalPartsCount ?? 0,
+      updatedBy,
+      updatedByRole: 'parts_allocator',
+      timestamp: serverTimestamp(),
+    });
+  }
 };
 
 // ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
