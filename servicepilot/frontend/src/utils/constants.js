@@ -22,6 +22,7 @@ export const VEHICLE_STATUSES = {
   QC: 'QC',
   WASHING: 'Washing',
   RFD: 'RFD',
+  PRWA: 'PRWA',
   DELIVERED: 'Delivered',
 };
 
@@ -35,11 +36,12 @@ export const STATUS_LABELS = {
   QC: 'Quality Check',
   Washing: 'Washing',
   RFD: 'Ready For Delivery',
+  PRWA: 'Parts Received, Waiting for Allocation',
   Delivered: 'Delivered',
 };
 
 export const STATUS_FLOW_ADVISER = ['WDA', 'WIA', 'WCA', 'WFA'];
-export const STATUS_FLOW_JC = ['WIP', 'PNA', 'QC', 'Washing', 'RFD'];
+export const STATUS_FLOW_JC = ['WIP', 'PNA', 'PRWA', 'QC', 'Washing', 'RFD'];
 
 export const WIP_SUBSTATUS = [
   'Denting',
@@ -83,6 +85,7 @@ export const STATUS_COLORS = {
   PNA: '#ef4444',
   QC: '#14b8a6',
   Washing: '#06b6d4',
+  PRWA: '#10b981',
   RFD: '#22c55e',
   Delivered: '#10b981',
 };
