@@ -20,7 +20,7 @@ export default function VehicleTimeline({ vehicleId }) {
   return (
     <div className="space-y-0">
       {history.map((entry, i) => {
-        const color = STATUS_COLORS[entry.currentStatus] || '#64748b';
+        const color = STATUS_COLORS[entry.status] || '#64748b';
         const isLast = i === history.length - 1;
         return (
           <div key={entry.id} className="timeline-item">
@@ -35,7 +35,7 @@ export default function VehicleTimeline({ vehicleId }) {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-semibold text-sm text-surface-900 dark:text-white">
-                    {STATUS_LABELS[entry.currentStatus] || entry.currentStatus}
+                    {STATUS_LABELS[entry.status] || entry.status}
                     {entry.subStatus && <span className="ml-1 text-surface-400 font-normal">— {entry.subStatus}</span>}
                   </div>
                   {entry.previousStatus && (
