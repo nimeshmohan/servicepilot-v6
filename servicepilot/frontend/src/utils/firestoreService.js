@@ -208,9 +208,11 @@ export const updatePartsTracking = async (vehicleId, data, updatedBy, prevData =
   if (data.backOrderItems !== undefined && data.backOrderItems !== (Array.isArray(prevData.backOrderItems) ? prevData.backOrderItems.join(', ') : prevData.backOrderItems || ''))
     changes.push(`Back order items updated`);
 
+  const summary = changes.length > 0 ? changes.join(' · ') : 'Parts details updated';
+
   const logEntry = {
     orderStatus: data.orderStatus,
-    summary: changes.length > 0 ? changes.join(' · ') : 'Parts details updated',
+    summary,
     remarks: data.remarks || '',
     receivedPartsCount: data.receivedPartsCount,
     totalPartsCount: data.totalPartsCount,
@@ -219,10 +221,27 @@ export const updatePartsTracking = async (vehicleId, data, updatedBy, prevData =
     timestamp: new Date().toISOString(),
   };
 
+  // Update partsTracking collection (for parts dashboard logs)
   await updateDoc(doc(db, 'partsTracking', vehicleId), {
     ...data,
     updatedAt: serverTimestamp(),
     logs: arrayUnion(logEntry),
+  });
+
+  // ALSO write to vehicleStatusHistory so it appears in the Status Timeline
+  await addDoc(collection(db, 'vehicleStatusHistory'), {
+    vehicleId,
+    status: 'PNA',                    // vehicle is still PNA
+    previousStatus: 'PNA',
+    entryType: 'parts_update',        // flag to render differently in timeline
+    orderStatus: data.orderStatus,    // e.g. "Ordered", "Partially Received"
+    summary,                          // full change description
+    remarks: data.remarks || '',
+    receivedPartsCount: data.receivedPartsCount ?? prevData.receivedPartsCount ?? 0,
+    totalPartsCount: data.totalPartsCount ?? prevData.totalPartsCount ?? 0,
+    updatedBy,
+    updatedByRole: 'parts_allocator',
+    timestamp: serverTimestamp(),
   });
 };
 
