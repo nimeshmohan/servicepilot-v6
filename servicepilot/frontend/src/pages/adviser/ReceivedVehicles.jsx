@@ -70,7 +70,8 @@ export default function ReceivedVehicles() {
     try {
       const enteredJC = updateForm.jobCardNumber?.trim();
       const additionalData = {};
-      if (enteredJC && enteredJC !== selectedVehicle.jobCardNumber) {
+      // Always save jobCardNumber if any value is entered (even if same as before)
+      if (enteredJC) {
         additionalData.jobCardNumber = enteredJC;
       }
 
