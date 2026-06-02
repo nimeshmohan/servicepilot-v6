@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { Search, Eye, RefreshCw, Pencil } from 'lucide-react';
 
 const ADVISER_STATUSES = ['WDA', 'WIA', 'WCA', 'WFA'];
+const FILTER_STATUSES  = ['WDA', 'WIA', 'WCA', 'WFA', 'RFD'];
 const NEXT_STATUS = { WDA: 'WIA', WIA: 'WCA', WCA: 'WFA', WFA: 'WFA' };
 
 export default function ReceivedVehicles() {
@@ -24,16 +25,14 @@ export default function ReceivedVehicles() {
   const [updateForm, setUpdateForm] = useState({ status: '', remarks: '' });
   const [updating, setUpdating] = useState(false);
 
-  // Edit vehicle details
   const [editing, setEditing] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeVehicles((data) => {
-      // Only show adviser's vehicles that are in adviser statuses
       const filtered = data.filter(v =>
-        v.adviserId === user.uid && ADVISER_STATUSES.includes(v.currentStatus)
+        v.adviserId === user.uid && FILTER_STATUSES.includes(v.currentStatus)
       );
       setVehicles(filtered);
       setLoading(false);
@@ -61,8 +60,20 @@ export default function ReceivedVehicles() {
 
   const handleUpdate = async () => {
     if (!selectedVehicle) return;
+
+    if (updateForm.status === 'WFA') {
+      const jc = updateForm.jobCardNumber?.trim() || selectedVehicle.jobCardNumber?.trim();
+      if (!jc) return toast.error('Job Card Number is required before moving to WFA');
+    }
+
     setUpdating(true);
     try {
+      const enteredJC = updateForm.jobCardNumber?.trim();
+      const additionalData = {};
+      if (enteredJC && enteredJC !== selectedVehicle.jobCardNumber) {
+        additionalData.jobCardNumber = enteredJC;
+      }
+
       await updateVehicleStatus(selectedVehicle.id, {
         status: updateForm.status,
         subStatus: null,
@@ -70,6 +81,7 @@ export default function ReceivedVehicles() {
         updatedBy: userProfile?.name || user.email,
         updatedByRole: 'service_adviser',
         previousStatus: selectedVehicle.currentStatus,
+        additionalData,
       });
       toast.success(`Status updated to ${updateForm.status}`);
       setShowUpdateModal(false);
@@ -139,7 +151,6 @@ export default function ReceivedVehicles() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
@@ -150,8 +161,8 @@ export default function ReceivedVehicles() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
-          {['all', ...ADVISER_STATUSES].map(s => (
+        <div className="flex gap-2 flex-wrap">
+          {['all', ...FILTER_STATUSES].map(s => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
@@ -163,7 +174,6 @@ export default function ReceivedVehicles() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="card">
         <div className="table-wrapper">
           {loading ? (
@@ -213,12 +223,14 @@ export default function ReceivedVehicles() {
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
-                          <button
-                            className="btn-primary btn-sm"
-                            onClick={() => openUpdateModal(v)}
-                          >
-                            <RefreshCw className="w-3 h-3" /> Update
-                          </button>
+                          {v.currentStatus !== 'RFD' && (
+                            <button
+                              className="btn-primary btn-sm"
+                              onClick={() => openUpdateModal(v)}
+                            >
+                              <RefreshCw className="w-3 h-3" /> Update
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -230,12 +242,10 @@ export default function ReceivedVehicles() {
         </div>
       </div>
 
-      {/* Timeline Modal */}
       <Modal isOpen={showTimeline} onClose={() => setShowTimeline(false)} title={`Timeline — ${selectedVehicle?.vehicleNumber}`} size="lg">
         {selectedVehicle && <VehicleTimeline vehicleId={selectedVehicle.id} />}
       </Modal>
 
-      {/* Update Status Modal */}
       <Modal isOpen={showUpdateModal} onClose={() => setShowUpdateModal(false)} title="Update Vehicle Status">
         {selectedVehicle && (
           <div className="space-y-4">
@@ -284,7 +294,7 @@ export default function ReceivedVehicles() {
           </div>
         )}
       </Modal>
-      {/* Edit Details Modal */}
+
       <Modal isOpen={!!editing} onClose={() => setEditing(null)} title={`Edit Vehicle — ${editing?.vehicleNumber}`} size="xl">
         {editing && (
           <div className="space-y-4 p-1">
