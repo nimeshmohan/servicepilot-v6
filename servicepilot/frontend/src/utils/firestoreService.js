@@ -176,6 +176,14 @@ export const subscribePartsTracking = (callback) => {
 };
 
 export const updatePartsTracking = async (vehicleId, data, updatedBy, prevData = {}) => {
+  // Helper must be declared BEFORE use to avoid "cannot access before initialization"
+  const toDateStr = (val) => {
+    if (!val) return '';
+    if (val?.seconds) return new Date(val.seconds * 1000).toISOString().split('T')[0];
+    if (typeof val === 'string') return val.split('T')[0];
+    return '';
+  };
+
   // Build a detailed human-readable summary of what changed
   const changes = [];
 
@@ -199,14 +207,6 @@ export const updatePartsTracking = async (vehicleId, data, updatedBy, prevData =
     changes.push(`Pending items updated`);
   if (data.backOrderItems !== undefined && data.backOrderItems !== (Array.isArray(prevData.backOrderItems) ? prevData.backOrderItems.join(', ') : prevData.backOrderItems || ''))
     changes.push(`Back order items updated`);
-
-  // Helper to normalise Firestore Timestamps to plain date strings for comparison
-  const toDateStr = (val) => {
-    if (!val) return '';
-    if (val?.seconds) return new Date(val.seconds * 1000).toISOString().split('T')[0];
-    if (typeof val === 'string') return val.split('T')[0];
-    return '';
-  };
 
   const logEntry = {
     orderStatus: data.orderStatus,
