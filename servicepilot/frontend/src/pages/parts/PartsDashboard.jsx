@@ -352,20 +352,24 @@ export default function PartsDashboard() {
 
       {/* ── History / Timeline Modal ── */}
       <Modal isOpen={showHistory} onClose={() => setShowHistory(false)} title={`Parts Update History — ${historyVehicle?.vehicleNumber}`} size="lg">
-        {historyVehicle && (
-          <div className="p-1">
-            <div className="flex items-center gap-3 mb-5 bg-surface-50 dark:bg-surface-700/30 rounded-xl p-3">
-              <div>
-                <div className="font-mono font-semibold text-brand-600">{historyVehicle.vehicleNumber}</div>
-                <div className="text-xs text-surface-400">{historyVehicle.jobCardNumber || 'No job card'} · Adviser: {historyVehicle.adviserName}</div>
+        {historyVehicle && (() => {
+          // Always read live data so updates show immediately without reopening
+          const live = parts.find(p => p.id === historyVehicle.id) || historyVehicle;
+          return (
+            <div className="p-1">
+              <div className="flex items-center gap-3 mb-5 bg-surface-50 dark:bg-surface-700/30 rounded-xl p-3">
+                <div>
+                  <div className="font-mono font-semibold text-brand-600">{live.vehicleNumber}</div>
+                  <div className="text-xs text-surface-400">{live.jobCardNumber || 'No job card'} · Adviser: {live.adviserName}</div>
+                </div>
+                <div className="ml-auto">
+                  <OrderStatusBadge status={live.orderStatus} />
+                </div>
               </div>
-              <div className="ml-auto">
-                <OrderStatusBadge status={historyVehicle.orderStatus} />
-              </div>
+              <PartsTimeline logs={live.logs || []} />
             </div>
-            <PartsTimeline logs={historyVehicle.logs || []} />
-          </div>
-        )}
+          );
+        })()}
       </Modal>
     </div>
   );
