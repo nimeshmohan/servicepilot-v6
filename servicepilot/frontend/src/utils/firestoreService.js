@@ -180,25 +180,33 @@ export const updatePartsTracking = async (vehicleId, data, updatedBy, prevData =
   const changes = [];
 
   if (data.orderStatus && data.orderStatus !== prevData.orderStatus)
-    changes.push();
-  if (data.vendorName && data.vendorName !== prevData.vendorName)
-    changes.push();
-  if (data.etaDate && data.etaDate !== prevData.etaDate)
-    changes.push();
-  if (data.orderDate && data.orderDate !== prevData.orderDate)
-    changes.push();
-  if (data.receivedDate && data.receivedDate !== prevData.receivedDate)
-    changes.push();
-  if (data.invoiceNumber && data.invoiceNumber !== prevData.invoiceNumber)
-    changes.push();
-  if (data.totalPartsCount !== undefined && data.totalPartsCount !== prevData.totalPartsCount)
-    changes.push();
-  if (data.receivedPartsCount !== undefined && data.receivedPartsCount !== prevData.receivedPartsCount)
-    changes.push();
-  if (data.pendingItems && data.pendingItems !== prevData.pendingItems)
-    changes.push();
-  if (data.backOrderItems && data.backOrderItems !== prevData.backOrderItems)
-    changes.push();
+    changes.push(`Order status: ${prevData.orderStatus || '—'} → ${data.orderStatus}`);
+  if (data.vendorName !== undefined && data.vendorName !== prevData.vendorName)
+    changes.push(`Vendor: ${prevData.vendorName || '—'} → ${data.vendorName || '—'}`);
+  if (data.etaDate && data.etaDate !== toDateStr(prevData.etaDate))
+    changes.push(`ETA date: ${toDateStr(prevData.etaDate) || '—'} → ${data.etaDate}`);
+  if (data.orderDate && data.orderDate !== toDateStr(prevData.orderDate))
+    changes.push(`Order date: ${toDateStr(prevData.orderDate) || '—'} → ${data.orderDate}`);
+  if (data.receivedDate && data.receivedDate !== toDateStr(prevData.receivedDate))
+    changes.push(`Received date set: ${data.receivedDate}`);
+  if (data.invoiceNumber !== undefined && data.invoiceNumber !== prevData.invoiceNumber)
+    changes.push(`Invoice: ${prevData.invoiceNumber || '—'} → ${data.invoiceNumber || '—'}`);
+  if (data.totalPartsCount !== undefined && +data.totalPartsCount !== +prevData.totalPartsCount)
+    changes.push(`Total parts: ${prevData.totalPartsCount ?? 0} → ${data.totalPartsCount}`);
+  if (data.receivedPartsCount !== undefined && +data.receivedPartsCount !== +prevData.receivedPartsCount)
+    changes.push(`Received parts: ${prevData.receivedPartsCount ?? 0} → ${data.receivedPartsCount}`);
+  if (data.pendingItems !== undefined && data.pendingItems !== (Array.isArray(prevData.pendingItems) ? prevData.pendingItems.join(', ') : prevData.pendingItems || ''))
+    changes.push(`Pending items updated`);
+  if (data.backOrderItems !== undefined && data.backOrderItems !== (Array.isArray(prevData.backOrderItems) ? prevData.backOrderItems.join(', ') : prevData.backOrderItems || ''))
+    changes.push(`Back order items updated`);
+
+  // Helper to normalise Firestore Timestamps to plain date strings for comparison
+  const toDateStr = (val) => {
+    if (!val) return '';
+    if (val?.seconds) return new Date(val.seconds * 1000).toISOString().split('T')[0];
+    if (typeof val === 'string') return val.split('T')[0];
+    return '';
+  };
 
   const logEntry = {
     orderStatus: data.orderStatus,
