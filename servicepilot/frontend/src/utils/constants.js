@@ -40,7 +40,7 @@ export const STATUS_LABELS = {
   Delivered: 'Delivered',
 };
 
-export const STATUS_FLOW_ADVISER = ['WDA', 'WIA', 'WCA', 'WFA'];
+export const STATUS_FLOW_ADVISER = ['WDA', 'WIA', 'WCA', 'WFA', 'Delivered'];
 export const STATUS_FLOW_JC = ['WIP', 'PNA', 'PRWA', 'QC', 'Washing', 'RFD'];
 
 export const WIP_SUBSTATUS = [
