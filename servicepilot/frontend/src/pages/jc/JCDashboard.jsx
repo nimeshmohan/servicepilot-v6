@@ -9,8 +9,8 @@ import VehicleTimeline from '@/components/shared/VehicleTimeline';
 import toast from 'react-hot-toast';
 import { Search, RefreshCw, Eye, AlertTriangle } from 'lucide-react';
 
-const JC_STATUSES = ['WFA', 'WIP', 'PNA', 'QC', 'Washing', 'RFD'];
-const JC_NEXT = { WFA: 'WIP', WIP: 'QC', PNA: 'WIP', QC: 'Washing', Washing: 'RFD', RFD: 'Delivered' };
+const JC_STATUSES = ['WFA', 'WIP', 'PNA', 'PRWA', 'QC', 'Washing', 'RFD'];
+const JC_NEXT = { WFA: 'WIP', WIP: 'QC', PNA: 'WIP', PRWA: 'WIP', QC: 'Washing', Washing: 'RFD', RFD: 'Delivered' };
 
 export default function JCDashboard() {
   const { user, userProfile } = useAuth();
@@ -41,12 +41,13 @@ export default function JCDashboard() {
   });
 
   const stats = {
-    wfa: vehicles.filter(v => v.currentStatus === 'WFA').length,
-    wip: vehicles.filter(v => v.currentStatus === 'WIP').length,
-    pna: vehicles.filter(v => v.currentStatus === 'PNA').length,
-    qc: vehicles.filter(v => v.currentStatus === 'QC').length,
-    washing: vehicles.filter(v => v.currentStatus === 'Washing').length,
-    rfd: vehicles.filter(v => v.currentStatus === 'RFD').length,
+    wfa:    vehicles.filter(v => v.currentStatus === 'WFA').length,
+    wip:    vehicles.filter(v => v.currentStatus === 'WIP').length,
+    pna:    vehicles.filter(v => v.currentStatus === 'PNA').length,
+    prwa:   vehicles.filter(v => v.currentStatus === 'PRWA').length,
+    qc:     vehicles.filter(v => v.currentStatus === 'QC').length,
+    washing:vehicles.filter(v => v.currentStatus === 'Washing').length,
+    rfd:    vehicles.filter(v => v.currentStatus === 'RFD').length,
   };
 
   const openUpdate = (vehicle) => {
@@ -84,19 +85,20 @@ export default function JCDashboard() {
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+      <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
         {[
-          { label: 'WFA', count: stats.wfa },
-          { label: 'WIP', count: stats.wip },
-          { label: 'PNA', count: stats.pna },
-          { label: 'QC', count: stats.qc },
+          { label: 'WFA',     count: stats.wfa },
+          { label: 'WIP',     count: stats.wip },
+          { label: 'PNA',     count: stats.pna },
+          { label: 'PRWA',    count: stats.prwa },
+          { label: 'QC',      count: stats.qc },
           { label: 'Washing', count: stats.washing },
-          { label: 'RFD', count: stats.rfd },
+          { label: 'RFD',     count: stats.rfd },
         ].map(s => (
           <button
             key={s.label}
             onClick={() => setStatusFilter(statusFilter === s.label ? 'all' : s.label)}
-            className={`card p-3 text-center cursor-pointer transition-all ${statusFilter === s.label ? 'ring-2 ring-brand-500' : 'hover:shadow-md'}`}
+            className={`card p-2 text-center cursor-pointer transition-all ${statusFilter === s.label ? 'ring-2 ring-brand-500' : 'hover:shadow-md'}`}
           >
             <div className="text-xl font-bold text-surface-900 dark:text-white">{s.count}</div>
             <StatusBadge status={s.label} size="sm" />
@@ -193,7 +195,7 @@ export default function JCDashboard() {
             <div>
               <label className="label">New Status</label>
               <div className="grid grid-cols-3 gap-2">
-                {['WIP', 'PNA', 'QC', 'Washing', 'RFD', 'Delivered'].map(s => (
+                {['WIP', 'PNA', 'PRWA', 'QC', 'Washing', 'RFD', 'Delivered'].map(s => (
                   <button
                     key={s}
                     type="button"
