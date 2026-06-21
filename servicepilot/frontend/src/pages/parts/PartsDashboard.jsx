@@ -4,7 +4,7 @@ import { subscribePartsTracking, updatePartsTracking } from '@/utils/firestoreSe
 import { formatDate, daysSince } from '@/utils/helpers';
 import Modal from '@/components/shared/Modal';
 import toast from 'react-hot-toast';
-import { Package, Search, RefreshCw, AlertTriangle, Clock, CheckCircle, Eye, User } from 'lucide-react';
+import { Package, Search, RefreshCw, AlertTriangle, Clock, CheckCircle, Eye, User, Activity, X } from 'lucide-react';
 
 const ORDER_STATUSES = ['Pending', 'Ordered', 'Partially Received', 'Fully Received', 'Back Order'];
 
@@ -124,6 +124,9 @@ export default function PartsDashboard() {
   const [showHistory, setShowHistory] = useState(false);
   const [historyVehicle, setHistoryVehicle] = useState(null);
 
+  // Card drill-down filter
+  const [cardFilter, setCardFilter] = useState(null); // null | 'live' | 'pending' | 'ordered' | 'backorder' | 'total'
+
   useEffect(() => {
     const unsub = subscribePartsTracking((data) => {
       setParts(data);
@@ -139,10 +142,31 @@ export default function PartsDashboard() {
   );
 
   const stats = {
-    total:    parts.length,
-    pending:  parts.filter(p => p.orderStatus === 'Pending').length,
-    backOrder:parts.filter(p => p.orderStatus === 'Back Order').length,
-    received: parts.filter(p => p.orderStatus === 'Fully Received').length,
+    live:      parts.filter(p => p.orderStatus !== 'Fully Received').length,   // All PNA except Fully Received
+    pending:   parts.filter(p => p.orderStatus === 'Pending').length,
+    ordered:   parts.filter(p => p.orderStatus === 'Ordered').length,
+    backOrder: parts.filter(p => p.orderStatus === 'Back Order').length,
+    total:     parts.length,
+  };
+
+  // Vehicles shown when a stat card is clicked
+  const cardFiltered = (() => {
+    switch (cardFilter) {
+      case 'live':      return parts.filter(p => p.orderStatus !== 'Fully Received');
+      case 'pending':    return parts.filter(p => p.orderStatus === 'Pending');
+      case 'ordered':    return parts.filter(p => p.orderStatus === 'Ordered');
+      case 'backorder':  return parts.filter(p => p.orderStatus === 'Back Order');
+      case 'total':      return parts;
+      default:           return [];
+    }
+  })();
+
+  const cardFilterLabel = {
+    live: 'Live PNA (excluding Fully Received)',
+    pending: 'Pending Order',
+    ordered: 'Ordered',
+    backorder: 'Back Order',
+    total: 'Total PNA',
   };
 
   const openUpdate = (part) => {
@@ -199,13 +223,75 @@ export default function PartsDashboard() {
         <p className="text-surface-500 text-sm mt-0.5">Track PNA vehicles and parts availability</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <StatCard icon={Package}       label="Total PNA"      value={stats.total}     color="purple" />
-        <StatCard icon={Clock}         label="Pending Order"  value={stats.pending}   color="yellow" />
-        <StatCard icon={AlertTriangle} label="Back Order"     value={stats.backOrder} color="red"    />
-        <StatCard icon={CheckCircle}   label="Fully Received" value={stats.received}  color="green"  />
+      {/* Stats — clickable, drill down to vehicle list */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <StatCard icon={Package}       label="Live PNA"      value={stats.live}      color="purple" onClick={() => setCardFilter(f => f === 'live' ? null : 'live')}           active={cardFilter === 'live'} />
+        <StatCard icon={Clock}         label="Pending Order" value={stats.pending}   color="yellow" onClick={() => setCardFilter(f => f === 'pending' ? null : 'pending')}     active={cardFilter === 'pending'} />
+        <StatCard icon={Activity}      label="Ordered"       value={stats.ordered}   color="blue"   onClick={() => setCardFilter(f => f === 'ordered' ? null : 'ordered')}     active={cardFilter === 'ordered'} />
+        <StatCard icon={AlertTriangle} label="Back Order"    value={stats.backOrder} color="red"    onClick={() => setCardFilter(f => f === 'backorder' ? null : 'backorder')} active={cardFilter === 'backorder'} />
+        <StatCard icon={CheckCircle}   label="Total PNA"     value={stats.total}     color="green"  onClick={() => setCardFilter(f => f === 'total' ? null : 'total')}         active={cardFilter === 'total'} />
       </div>
+
+      {/* Drill-down vehicle list for clicked card */}
+      {cardFilter && (
+        <div className="card animate-fade-in">
+          <div className="p-4 border-b border-surface-100 dark:border-surface-700 flex items-center justify-between">
+            <h2 className="font-bold text-surface-900 dark:text-white text-sm">
+              {cardFilterLabel[cardFilter]}
+              <span className="ml-2 text-surface-400 font-normal">({cardFiltered.length})</span>
+            </h2>
+            <button onClick={() => setCardFilter(null)} className="text-surface-400 hover:text-surface-600">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="table-wrapper">
+            {cardFiltered.length === 0 ? (
+              <div className="p-6 text-center text-surface-400 text-sm">No vehicles in this category</div>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Vehicle No.</th><th>Job Card</th><th>Order Status</th>
+                    <th>ETA Date</th><th>Parts Progress</th><th>Vendor</th><th>Days</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cardFiltered.map(p => {
+                    const progress = p.totalPartsCount > 0
+                      ? Math.round((p.receivedPartsCount / p.totalPartsCount) * 100) : 0;
+                    const etaStr = p.etaDate?.seconds
+                      ? new Date(p.etaDate.seconds * 1000).toLocaleDateString('en-IN')
+                      : p.etaDate || '—';
+                    return (
+                      <tr key={p.id}>
+                        <td className="font-mono font-semibold text-brand-600 dark:text-brand-400">{p.vehicleNumber}</td>
+                        <td className="font-mono text-sm">{p.jobCardNumber || '—'}</td>
+                        <td><OrderStatusBadge status={p.orderStatus} /></td>
+                        <td className="text-sm">{etaStr}</td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-surface-200 dark:bg-surface-600 rounded-full overflow-hidden">
+                              <div className="h-full bg-brand-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
+                            </div>
+                            <span className="text-xs text-surface-500">{p.receivedPartsCount}/{p.totalPartsCount}</span>
+                          </div>
+                        </td>
+                        <td className="text-sm">{p.vendorName || '—'}</td>
+                        <td><span className="font-mono text-xs text-surface-500">{daysSince(p.createdAt)}d</span></td>
+                        <td>
+                          <button className="btn-ghost btn-sm p-1.5" onClick={() => openUpdate(p)}>
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative">
@@ -382,20 +468,24 @@ function toDateInput(val) {
   return val;
 }
 
-function StatCard({ icon: Icon, label, value, color }) {
+function StatCard({ icon: Icon, label, value, color, onClick, active }) {
   const colorMap = {
     purple: 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
     yellow: 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
+    blue:   'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
     red:    'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400',
     green:  'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400',
   };
   return (
-    <div className="stat-card">
+    <button
+      onClick={onClick}
+      className={`stat-card text-left w-full cursor-pointer transition-all hover:shadow-md active:scale-[0.98] ${active ? 'ring-2 ring-brand-500' : ''}`}
+    >
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center mb-2 ${colorMap[color]}`}>
         <Icon className="w-5 h-5" />
       </div>
       <div className="text-2xl font-bold text-surface-900 dark:text-white">{value}</div>
       <div className="text-xs text-surface-500">{label}</div>
-    </div>
+    </button>
   );
 }
